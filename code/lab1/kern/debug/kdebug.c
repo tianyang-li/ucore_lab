@@ -281,7 +281,7 @@ static __noinline uint32_t read_eip(void) {
  * to the kernel entry, the value of ebp has been set to zero, that's the boundary.
  * */
 void print_stackframe(void) {
-	/* LAB1 YOUR CODE : STEP 1 */
+	/* LAB1 2009011419 : STEP 1 */
 	/* (1) call read_ebp() to get the value of ebp. the type is (uint32_t);
 	 * (2) call read_eip() to get the value of eip. the type is (uint32_t);
 	 * (3) from 0 .. STACKFRAME_DEPTH
