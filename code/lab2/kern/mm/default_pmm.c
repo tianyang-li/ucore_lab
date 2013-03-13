@@ -132,7 +132,14 @@ static void default_free_pages(struct Page *base, size_t n) {
 		}
 	}
 	nr_free += n;
-	list_add(&free_list, &(base->page_link));
+
+	le = &free_list;
+	while ((le = list_next(le)) != &free_list) {
+		if (le2page(le, page_link) > base) {
+			break;
+		}
+	}
+	list_add_before(le, &(base->page_link));
 }
 
 static size_t default_nr_free_pages(void) {
