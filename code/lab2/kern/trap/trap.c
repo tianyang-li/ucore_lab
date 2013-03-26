@@ -147,7 +147,7 @@ static void
 trap_dispatch(struct trapframe *tf) {
     char c;
 
-	static int ticks = 0;
+    static int ticks = 0;
 
 	switch (tf->tf_trapno) {
 	case IRQ_OFFSET + IRQ_TIMER:
