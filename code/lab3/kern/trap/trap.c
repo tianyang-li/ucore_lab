@@ -13,6 +13,8 @@
 
 #define TICK_NUM 100
 
+extern uintptr_t __vectors[];
+
 static void print_ticks() {
     cprintf("%d ticks\n",TICK_NUM);
 #ifdef DEBUG_GRADE
