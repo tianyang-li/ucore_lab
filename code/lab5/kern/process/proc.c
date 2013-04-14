@@ -113,6 +113,16 @@ alloc_proc(void) {
 		proc->tf = 0;
 		proc->cr3 = boot_cr3;
 		proc->flags = 0;
+		memset(proc->name, 0, PROC_NAME_LEN + 1);
+
+		//LAB5 YOUR CODE : (update LAB4 steps)
+		/*
+		 * below fields(add in LAB5) in proc_struct need to be initialized
+		 *       uint32_t wait_state;                        // waiting state
+		 *       struct proc_struct *cptr, *yptr, *optr;     // relations between processes
+		 */
+		proc->wait_state = 0;
+		proc->cptr = proc->yptr = proc->optr = NULL;
 	}
 	return proc;
 }
@@ -391,7 +401,7 @@ int do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
 	wakeup_proc(proc);
 
 	//    7. set ret vaule using child proc's pid
-	//LAB5 YOUR CODE : (update LAB4 steps)
+	//LAB5 2009011419 : (update LAB4 steps)
 	/* Some Functions
 	 *    set_links:  set the relation links of process.  ALSO SEE: remove_links:  lean the relation links of process
 	 *    -------------------
@@ -588,7 +598,7 @@ static int load_icode(unsigned char *binary, size_t size) {
 	//(6) setup trapframe for user environment
 	struct trapframe *tf = current->tf;
 	memset(tf, 0, sizeof(struct trapframe));
-	/* LAB5:EXERCISE1 YOUR CODE
+	/* LAB5:EXERCISE1 2009011419
 	 * should set tf_cs,tf_ds,tf_es,tf_ss,tf_esp,tf_eip,tf_eflags
 	 * NOTICE: If we set trapframe correctly, then the user level process can return to USER MODE from kernel. So
 	 *          tf_cs should be USER_CS segment (see memlayout.h)
@@ -597,6 +607,12 @@ static int load_icode(unsigned char *binary, size_t size) {
 	 *          tf_eip should be the entry point of this binary program (elf->e_entry)
 	 *          tf_eflags should be set to enable computer to produce Interrupt
 	 */
+	tf->tf_cs = USER_CS;
+	tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
+	tf->tf_esp = USTACKTOP;
+	tf->tf_eip = elf->e_entry;
+	tf->tf_eflags |= FL_IF;
+
 	ret = 0;
 	out: return ret;
 	bad_cleanup_mmap: exit_mmap(mm);
