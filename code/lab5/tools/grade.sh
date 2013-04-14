@@ -158,6 +158,10 @@ run_qemu() {
         # on OS X, exiting gdb doesn't always exit qemu
         kill $pid > /dev/null 2>&1
     fi
+
+    echo "#*#*#*#"
+    cat $qemu_out
+    echo "#*#*#*#"
 }
 
 build_run() {
