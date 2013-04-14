@@ -22,7 +22,7 @@ extern uintptr_t __vectors[];
 
 static void print_ticks() {
 	cprintf("%d ticks\n", TICK_NUM);
-#ifdef DEBUG_GRADE
+#ifdef DEBUG_GRADE_
 	cprintf("End of Test.\n");
 	panic("EOT: kernel seems ok.");
 #endif
