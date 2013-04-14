@@ -59,6 +59,10 @@ void idt_init(void) {
 	}
 	SETGATE(idt[T_SYSCALL], 1, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
 	lidt(&idt_pd);
+
+	/* LAB5 2009011419 */
+	//you should update your lab1 code (just add ONE or TWO lines of code), let user app to use syscall to get the service of ucore
+	//so you should setup the syscall interrupt gate in here
 }
 
 static const char *
@@ -207,6 +211,7 @@ static void trap_dispatch(struct trapframe *tf) {
 		} else {
 			print_ticks();
 			ticks = 0;
+			current->need_resched = 1;
 		}
 		/* LAB5 2009011419*/
 		/* you should upate you lab1 code (just add ONE or TWO lines of code):
