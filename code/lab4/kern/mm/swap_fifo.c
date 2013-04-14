@@ -30,11 +30,13 @@ list_entry_t pra_list_head;
  * (2) _fifo_init_mm: init pra_list_head and let  mm->sm_priv point to the addr of pra_list_head.
  *              Now, From the memory control struct mm_struct, we can access FIFO PRA
  */
-static int _fifo_init_mm(struct mm_struct *mm) {
-	list_init(&pra_list_head);
-	mm->sm_priv = &pra_list_head;
-	//cprintf(" mm->sm_priv %x in fifo_init_mm\n",mm->sm_priv);
-	return 0;
+static int
+_fifo_init_mm(struct mm_struct *mm)
+{     
+     list_init(&pra_list_head);
+     mm->sm_priv = &pra_list_head;
+     //cprintf(" mm->sm_priv %x in fifo_init_mm\n",mm->sm_priv);
+     return 0;
 }
 /*
  * (3)_fifo_map_swappable: According FIFO PRA, we should link the most recent arrival page at the back of pra_list_head qeueue
