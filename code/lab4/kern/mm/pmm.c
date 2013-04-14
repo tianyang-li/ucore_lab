@@ -459,7 +459,6 @@ static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
 		//(6) flush tlb
 		tlb_invalidate(pgdir, la);
 	}
-
 }
 
 //page_remove - free an Page which is related linear address la and has an validated pte
