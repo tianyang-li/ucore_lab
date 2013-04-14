@@ -174,6 +174,8 @@ static void
 trap_dispatch(struct trapframe *tf) {
     char c;
 
+    static int ticks = 0;
+
     int ret;
 
     switch (tf->tf_trapno) {
