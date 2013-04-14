@@ -388,7 +388,7 @@ int do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
 	list_add_before(&proc_list, &(proc->list_link));
 
 	//    6. call wakup_proc to make the new child process RUNNABLE
-	proc->state = PROC_RUNNABLE;
+	wakeup_proc(proc);
 
 	//    7. set ret vaule using child proc's pid
 	//LAB5 YOUR CODE : (update LAB4 steps)
