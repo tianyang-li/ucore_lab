@@ -174,8 +174,6 @@ static void trap_dispatch(struct trapframe *tf) {
 
 	int ret = 0;
 
-	static int ticks = 0;
-
 	switch (tf->tf_trapno) {
 	case T_PGFLT:  //page fault
 		if ((ret = pgfault_handler(tf)) != 0) {
@@ -207,11 +205,10 @@ static void trap_dispatch(struct trapframe *tf) {
 		 * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
 		 * (3) Too Simple? Yes, I think so!
 		 */
-		if (ticks != TICK_NUM) {
-			++ticks;
-		} else {
+		++ticks;
+
+		if (!(ticks % TICK_NUM)) {
 			print_ticks();
-			ticks = 0;
 			current->need_resched = 1;
 		}
 		/* LAB5 2009011419*/
