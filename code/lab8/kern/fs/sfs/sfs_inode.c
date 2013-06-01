@@ -527,12 +527,14 @@ static int sfs_close(struct inode *node) {
 }
 
 /*  
- * sfs_io_nolock - Rd/Wr a file contentfrom offset position to offset+ length  disk blocks<-->buffer (in memroy)
+ * sfs_io_nolock - Rd/Wr a file contentfrom offset position to
+ * 				       offset+ length  disk blocks<-->buffer (in memroy)
  * @sfs:      sfs file system
  * @sin:      sfs inode in memory
  * @buf:      the buffer Rd/Wr
  * @offset:   the offset of file
- * @alenp:    the length need to read (is a pointer). and will RETURN the really Rd/Wr lenght
+ * @alenp:    the length need to read (is a pointer).
+ * 			      and will RETURN the really Rd/Wr lenght
  * @write:    BOOL, 0 read, 1 write
  */
 static int sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf,
@@ -540,7 +542,7 @@ static int sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf,
 	struct sfs_disk_inode *din = sin->din;
 	assert(din->type != SFS_TYPE_DIR);
 	off_t endpos = offset + *alenp, blkoff;
-	*alenp = 0;
+	//*alenp = 0;
 	// calculate the Rd/Wr end position
 	if (offset < 0 || offset >= SFS_MAX_FILE_SIZE || offset > endpos) {
 		return -E_INVAL;
@@ -576,17 +578,60 @@ static int sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf,
 	uint32_t blkno = offset / SFS_BLKSIZE;       // The NO. of Rd/Wr begin block
 	uint32_t nblks = endpos / SFS_BLKSIZE - blkno;  // The size of Rd/Wr blocks
 
-	//LAB8:EXERCISE1 YOUR CODE HINT: call sfs_bmap_load_nolock, sfs_rbuf, sfs_rblock,etc. read different kind of blocks in file
+	//LAB8:EXERCISE1 2009011419 HINT: call
+	//sfs_bmap_load_nolock, sfs_rbuf, sfs_rblock,etc.
+	//read different kind of blocks in file
 	/*
-	 * (1) If offset isn't aligned with the first block, Rd/Wr some content from offset to the end of the first block
+	 * (1) If offset isn't aligned with the first block,
+	 * 		 Rd/Wr some content from offset to the end of the first block
 	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_buf_op
 	 *               Rd/Wr size = (nblks != 0) ? (SFS_BLKSIZE - blkoff) : (endpos - offset)
-	 * (2) Rd/Wr aligned blocks 
-	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_block_op
-	 * (3) If end position isn't aligned with the last block, Rd/Wr some content from begin to the (endpos % SFS_BLKSIZE) of the last block
-	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_buf_op	
 	 */
-	out: *alenp = alen;
+	/*
+	 * (2) Rd/Wr aligned blocks
+	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_block_op
+	 */
+	/*
+	 * (3) If end position isn't aligned with the last block,
+	 * 		 Rd/Wr some content from begin to the (endpos % SFS_BLKSIZE)
+	 * 		 of the last block
+	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_buf_op
+	 */
+	blkoff = offset;
+	if (nblks != 0) {
+		size = SFS_BLKSIZE - blkoff;
+	} else {
+		size = endpos - offset;
+	}
+	alen = size;
+
+	uint32_t dblkno;
+	if (sfs_bmap_load_nolock(sfs, sin, blkno, &dblkno) != 0) {
+		panic("sfs_bmap_load_nolock(sfs, sin, blkno, &dblkno) failed!\n");
+	}
+	sfs_buf_op(sfs, buf, size, dblkno, blkoff);
+
+	if (nblks >= 2) {
+		if (sfs_bmap_load_nolock(sfs, sin, blkno + 1, &dblkno) != 0) {
+			panic(
+					"sfs_bmap_load_nolock(sfs, sin, blkno + 1, &dblkno) failed!\n");
+		}
+		sfs_block_op(sfs, buf + alen, dblkno, nblks - 1);
+		alen += ((nblks - 1) * SFS_BLKSIZE);
+	}
+
+	assert(alen + SFS_BLKSIZE >= *alenp);
+
+	if (alen < *alenp) {
+		if (sfs_bmap_load_nolock(sfs, sin, blkno + nblks, &dblkno) != 0) {
+			panic(
+					"sfs_bmap_load_nolock(sfs, sin, blkno + nblks, &dblkno) failed!\n");
+		}
+		sfs_buf_op(sfs, buf + alen, *alenp - alen, dblkno, 0);
+	}
+
+	out: //*alenp = alen;
+	alen = *alenp;
 	if (offset + alen > sin->din->size) {
 		sin->din->size = offset + alen;
 		sin->dirty = 1;
@@ -868,7 +913,7 @@ static int sfs_truncfile(struct inode *node, off_t len) {
 	struct sfs_disk_inode *din = sin->din;
 
 	int ret = 0;
-	//new number of disk blocks of file
+//new number of disk blocks of file
 	uint32_t nblks, tblks = ROUNDUP_DIV(len, SFS_BLKSIZE);
 	if (din->size == len) {
 		assert(tblks == din->blocks);
@@ -876,7 +921,7 @@ static int sfs_truncfile(struct inode *node, off_t len) {
 	}
 
 	lock_sin(sin);
-	// old number of disk blocks of file
+// old number of disk blocks of file
 	nblks = din->blocks;
 	if (nblks < tblks) {
 		// try to enlarge the file size by add new disk block at the end of file
@@ -887,7 +932,7 @@ static int sfs_truncfile(struct inode *node, off_t len) {
 			nblks++;
 		}
 	} else if (tblks < nblks) {
-		// try to reduce the file size 
+		// try to reduce the file size
 		while (tblks != nblks) {
 			if ((ret = sfs_bmap_truncate_nolock(sfs, sin)) != 0) {
 				goto out_unlock;
