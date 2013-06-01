@@ -667,6 +667,10 @@ static int load_icode(int fd, int argc, char **kargv) {
 			if (end < la) {
 				size -= la - end;
 			}
+			if ((ret = load_icode_read(fd, page2kva(page) + off, size, offset))
+					!= 0) {
+				goto bad_cleanup_mmap;
+			}
 			//memcpy(page2kva(page) + off, from, size);
 			start += size, offset += size;
 		}
@@ -683,10 +687,6 @@ static int load_icode(int fd, int argc, char **kargv) {
 				size -= la - end;
 			}
 			memset(page2kva(page) + off, 0, size);
-			if ((ret = load_icode_read(fd, page2kva(page) + off, size, offset))
-					!= 0) {
-				goto bad_cleanup_mmap;
-			}
 			start += size;
 			assert((end < la && start == end) || (end >= la && start == la));
 		}

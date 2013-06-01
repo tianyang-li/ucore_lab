@@ -626,7 +626,7 @@ static int sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf,
 
 	if (seg_1_e != seg_1_s) {
 		sfs_bmap_load_nolock(sfs, sin, blkno, &dblkno);
-		sfs_buf_op(sfs, buf, SFS_BLKSIZE - offset, dblkno,
+		sfs_buf_op(sfs, buf, SFS_BLKSIZE - offset % SFS_BLKSIZE, dblkno,
 				offset % SFS_BLKSIZE);
 		alen = (seg_1_e - seg_1_s);
 	}
