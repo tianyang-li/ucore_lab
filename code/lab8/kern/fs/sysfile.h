@@ -2,6 +2,7 @@
 #define __KERN_FS_SYSFILE_H__
 
 #include <defs.h>
+#include <stat.h>
 
 struct stat;
 struct dirent;
