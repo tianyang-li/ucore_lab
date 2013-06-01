@@ -597,37 +597,48 @@ static int sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf,
 	 * 		 of the last block
 	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_buf_op
 	 */
-	blkoff = offset;
-	if (nblks != 0) {
-		size = SFS_BLKSIZE - blkoff;
-	} else {
-		size = endpos - offset;
-	}
-	alen = size;
 
 	uint32_t dblkno;
-	if (sfs_bmap_load_nolock(sfs, sin, blkno, &dblkno) != 0) {
-		panic("sfs_bmap_load_nolock(sfs, sin, blkno, &dblkno) failed!\n");
-	}
-	sfs_buf_op(sfs, buf, size, dblkno, blkoff);
 
-	if (nblks >= 2) {
-		if (sfs_bmap_load_nolock(sfs, sin, blkno + 1, &dblkno) != 0) {
-			panic(
-					"sfs_bmap_load_nolock(sfs, sin, blkno + 1, &dblkno) failed!\n");
-		}
-		sfs_block_op(sfs, buf + alen, dblkno, nblks - 1);
-		alen += ((nblks - 1) * SFS_BLKSIZE);
+	if (nblks == 0) {
+		sfs_bmap_load_nolock(sfs, sin, blkno, &dblkno);
+		sfs_buf_op(sfs, buf, endpos - offset, dblkno, offset % SFS_BLKSIZE);
+		goto out;
 	}
 
-	assert(alen + SFS_BLKSIZE >= *alenp);
+	// [, )
+	off_t seg_1_s = offset, seg_1_e;
+	off_t seg_2_s, seg_2_e;
+	off_t seg_3_s, seg_3_e = endpos;
 
-	if (alen < *alenp) {
-		if (sfs_bmap_load_nolock(sfs, sin, blkno + nblks, &dblkno) != 0) {
-			panic(
-					"sfs_bmap_load_nolock(sfs, sin, blkno + nblks, &dblkno) failed!\n");
-		}
-		sfs_buf_op(sfs, buf + alen, *alenp - alen, dblkno, 0);
+	if (seg_1_s % SFS_BLKSIZE == 0) {
+		seg_1_e = seg_1_s;
+	} else {
+		seg_1_e = (blkno + 1) * SFS_BLKSIZE;
+	}
+	seg_2_s = seg_1_e;
+	if (seg_3_e % SFS_BLKSIZE == 0) {
+		seg_3_s = seg_3_e;
+	} else {
+		seg_3_s = (nblks + blkno) * SFS_BLKSIZE;
+	}
+	seg_2_e = seg_3_s;
+
+	if (seg_1_e != seg_1_s) {
+		sfs_bmap_load_nolock(sfs, sin, blkno, &dblkno);
+		sfs_buf_op(sfs, buf, SFS_BLKSIZE - offset, dblkno,
+				offset % SFS_BLKSIZE);
+		alen = (seg_1_e - seg_1_s);
+	}
+	if (seg_2_e != seg_2_s) {
+		sfs_bmap_load_nolock(sfs, sin, seg_2_s / SFS_BLKSIZE, &dblkno);
+		nblks = (seg_2_e - seg_2_s) / SFS_BLKSIZE;
+		sfs_block_op(sfs, buf + alen, dblkno, nblks);
+		alen += (seg_2_e - seg_2_s);
+	}
+	if (seg_3_e != seg_3_s) {
+		sfs_bmap_load_nolock(sfs, sin, endpos / SFS_BLKSIZE, &dblkno);
+		sfs_buf_op(sfs, buf + alen, endpos % SFS_BLKSIZE, dblkno, 0);
 	}
 
 	out: //*alenp = alen;
