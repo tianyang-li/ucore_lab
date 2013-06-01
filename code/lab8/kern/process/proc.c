@@ -602,27 +602,30 @@ static int load_icode(int fd, int argc, char **kargv) {
 		goto bad_pgdir_cleanup_mm;
 	}
 
-	struct stat binary_stat;
-	sysfile_fstat(fd, &binary_stat);
-	void *binary;
-	load_icode_read(fd, binary, binary_stat.st_size, 0);
-
 	//(3) copy TEXT/DATA section, build BSS parts in binary to memory space of process
 	struct Page *page;
 	//(3.1) get the file header of the bianry program (ELF format)
-	struct elfhdr *elf = (struct elfhdr *) binary;
+	struct elfhdr __elf, *elf = &__elf;
+	if ((ret = load_icode_read(fd, elf, sizeof(struct elfhdr), 0)) != 0) {
+		goto bad_elf_cleanup_pgdir;
+	}
 	//(3.2) get the entry of the program section headers of the bianry program (ELF format)
-	struct proghdr *ph = (struct proghdr *) (binary + elf->e_phoff);
 	//(3.3) This program is valid?
 	if (elf->e_magic != ELF_MAGIC) {
 		ret = -E_INVAL_ELF;
 		goto bad_elf_cleanup_pgdir;
 	}
 
-	uint32_t vm_flags, perm;
+	struct proghdr __ph, *ph = &__ph;
+	uint32_t vm_flags, perm, phnum;
 	struct proghdr *ph_end = ph + elf->e_phnum;
-	for (; ph < ph_end; ph++) {
+	for (phnum = 0; phnum != elf->e_phnum; phnum++) {
 		//(3.4) find every program section headers
+		off_t phoff = elf->e_phoff + sizeof(struct proghdr) * phnum;
+		if ((ret = load_icode_read(fd, ph, sizeof(struct proghdr), phoff))
+				!= 0) {
+			goto bad_cleanup_mmap;
+		}
 		if (ph->p_type != ELF_PT_LOAD) {
 			continue;
 		}
@@ -646,7 +649,8 @@ static int load_icode(int fd, int argc, char **kargv) {
 		if ((ret = mm_map(mm, ph->p_va, ph->p_memsz, vm_flags, NULL )) != 0) {
 			goto bad_cleanup_mmap;
 		}
-		unsigned char *from = binary + ph->p_offset;
+		//unsigned char *from = binary + ph->p_offset;
+		off_t offset = ph->p_offset;
 		size_t off, size;
 		uintptr_t start = ph->p_va, end, la = ROUNDDOWN(start, PGSIZE);
 
@@ -663,8 +667,8 @@ static int load_icode(int fd, int argc, char **kargv) {
 			if (end < la) {
 				size -= la - end;
 			}
-			memcpy(page2kva(page) + off, from, size);
-			start += size, from += size;
+			//memcpy(page2kva(page) + off, from, size);
+			start += size, offset += size;
 		}
 
 		//(3.6.2) build BSS section of binary program
@@ -679,6 +683,10 @@ static int load_icode(int fd, int argc, char **kargv) {
 				size -= la - end;
 			}
 			memset(page2kva(page) + off, 0, size);
+			if ((ret = load_icode_read(fd, page2kva(page) + off, size, offset))
+					!= 0) {
+				goto bad_cleanup_mmap;
+			}
 			start += size;
 			assert((end < la && start == end) || (end >= la && start == la));
 		}
